@@ -1,0 +1,302 @@
+
+R version 3.4.4 (2018-03-15) -- "Someone to Lean On"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> rm(list=ls())
+> 
+> 
+> library(xtable) #for table creation for latex
+> library(e1071)#for svm
+> 
+> #reporting session info
+> sessionInfo()
+R version 3.4.4 (2018-03-15)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 18.04.5 LTS
+
+Matrix products: default
+BLAS: /usr/lib/x86_64-linux-gnu/openblas/libblas.so.3
+LAPACK: /usr/lib/x86_64-linux-gnu/libopenblasp-r0.2.20.so
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] e1071_1.7-3  xtable_1.8-4
+
+loaded via a namespace (and not attached):
+[1] compiler_3.4.4 class_7.3-17  
+> 
+> 
+> #shape metrics
+> da_a = read.table('all_SHAPES.txt', sep=',', header=TRUE)
+> da_h = read.table('hem_SHAPES.txt', sep=',', header=TRUE)
+> 
+> data = rbind(da_a, da_h)
+> 
+> #eis
+> ei_a = read.table('all.txt', sep=',', header=TRUE)
+> ei_h = read.table('hem.txt', sep=',', header=TRUE)
+> 
+> ei = rbind(ei_a, ei_h)
+> #obtaining sp values
+> sp<-ei[,1]/(ei[,1]+ei[,2])
+> 
+> #color
+> color_a = read.table('all_COLORS.txt', sep=',', header=TRUE)
+> color_h = read.table('hem_COLORS.txt', sep=',', header=TRUE)
+> 
+> color = rbind(color_a, color_h)
+> 
+> #texture
+> texture_a = read.table('all_TEXTURE.txt', sep=',', header=TRUE)
+> texture_h = read.table('hem_TEXTURE.txt', sep=',', header=TRUE)
+> 
+> texture = rbind(texture_a, texture_h)
+> 
+> labs2<-as.factor(c(
++                   rep("all", dim(ei_a)[1]),
++                   rep("hem", dim(ei_h)[1])    ) )
+> 
+> 
+> labs<-as.factor(c(
++                   rep(1, dim(ei_a)[1]),
++                   rep(2, dim(ei_h)[1])    ) )
+> 
+> #counts plot
+> temp<-as.data.frame(cbind(ei,sp, color, texture, data))
+> 
+> #setup for SVM model
+> 
+> train<-as.data.frame(cbind(as.factor(labs), temp))
+> colnames(train)[1]<-"labs_svm"
+> 
+> #variables to keep
+> keep<-c(1:16)
+> 
+> #now let's tune the svm model using 5-folds on t-set and validaiton
+> 
+> set.seed(2405)
+> 
+> keep2<-which(train$labs_svm==1)
+> keep3<-which(train$labs_svm==2)
+> 
+> #80% for training and 20% for validation
+> obs_1 = keep2[1:floor(length(keep2)*0.80)]
+> obs_2 = keep3[1:floor(length(keep3)*0.80)]
+> 
+> obs<-c(obs_1, obs_2)
+> 
+> tc <- tune.control(cross = 5)
+> 
+> tune.out<-tune(svm, as.factor(labs_svm) ~.,
++           data=train[obs, keep],
++           kernel='radial',
++           ranges=list(cost=c(1:2),
++                       gamma=c(1/dim(train)[1], 1/dim(train[,keep])[2], 1/11, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2, 10 )
++                       ) ,
++           tunecontrol = tc)
+> 
+> summary(tune.out)
+
+Parameter tuning of ‘svm’:
+
+- sampling method: 5-fold cross validation 
+
+- best parameters:
+ cost gamma
+    2   0.2
+
+- best performance: 0.06759582 
+
+- Detailed performance results:
+   cost        gamma      error dispersion
+1     1  0.003846154 0.30789779 0.07536217
+2     2  0.003846154 0.28373984 0.05221252
+3     1  0.062500000 0.12508711 0.02064458
+4     2  0.062500000 0.07700348 0.03135243
+5     1  0.090909091 0.11567944 0.04706055
+6     2  0.090909091 0.07711963 0.04328878
+7     1  0.050000000 0.13461092 0.02127133
+8     2  0.050000000 0.09140534 0.02658848
+9     1  0.100000000 0.10603949 0.05027775
+10    2  0.100000000 0.07224158 0.04517801
+11    1  0.200000000 0.08687573 0.04747116
+12    2  0.200000000 0.06759582 0.04354355
+13    1  0.300000000 0.09651568 0.04886924
+14    2  0.300000000 0.07259001 0.04921753
+15    1  0.500000000 0.12508711 0.06839517
+16    2  0.500000000 0.09616725 0.04456171
+17    1  1.000000000 0.21660859 0.07448400
+18    2  1.000000000 0.18757259 0.07043132
+19    1  2.000000000 0.41277584 0.11259787
+20    2  2.000000000 0.38885017 0.11204633
+21    1 10.000000000 0.56678281 0.07161482
+22    2 10.000000000 0.54750290 0.08223845
+
+> 
+> #training data
+> ypred=predict(tune.out$best.model ,train[obs,])
+> table(predict=ypred, truth=train$labs_svm[obs])
+       truth
+predict   1   2
+      1 103   0
+      2   1 104
+> mean(ypred==as.factor(as.numeric(train$labs_svm[obs])))
+[1] 0.9951923
+> 
+> #validation data
+> ypred=predict(tune.out$best.model ,train[-obs,])
+> table(predict=ypred, truth=train$labs_svm[-obs])
+       truth
+predict  1  2
+      1 25  1
+      2  1 25
+> tab_v<-table(predict=ypred, truth=train$labs_svm[-obs])
+> mean(ypred==as.factor(as.numeric(train$labs_svm[-obs])))
+[1] 0.9615385
+> 
+> #obtaining 95% CI
+> binom.test(x=sum(diag(tab_v)), n=sum(tab_v), p= mean(ypred==as.factor(as.numeric(train$labs_svm[-obs]))) )
+
+	Exact binomial test
+
+data:  sum(diag(tab_v)) and sum(tab_v)
+number of successes = 50, number of trials = 52, p-value = 1
+alternative hypothesis: true probability of success is not equal to 0.9615385
+95 percent confidence interval:
+ 0.8678716 0.9953077
+sample estimates:
+probability of success 
+             0.9615385 
+
+> 
+> #calculating varibale importance
+> w <- t(tune.out$best.model$coefs) %*% tune.out$best.model$SV    # weight vectors
+> w <- apply(w, 2, function(v){sqrt(sum(v^2))})                   # weight
+> w_sort <- sort(w, decreasing = T)
+> 
+> #max weight
+> w_max<-(w[1])
+> 
+> #normalized weights relative to the max
+> w_norm<- w_sort / w_max
+> 
+> #table for Latex
+> #normalized
+> xtable(as.matrix(w_norm), digits=3)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Tue Sep 22 14:21:00 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ & x \\ 
+  \hline
+SD\_G & 101.695 \\ 
+  Mean\_B & 100.500 \\ 
+  Shape\_e2 & 91.564 \\ 
+  SD\_R & 71.291 \\ 
+  Shape\_circ & 63.177 \\ 
+  Shape\_e1 & 41.125 \\ 
+  SD\_B & 39.712 \\ 
+  Mean\_G & 38.850 \\ 
+  Shape\_eccent & 32.159 \\ 
+  black & 25.429 \\ 
+  Mean\_P & 23.305 \\ 
+  SD\_P & 23.227 \\ 
+  Mean\_R & 23.114 \\ 
+  sp & 16.759 \\ 
+  white & 1.000 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> #table for Latex
+> #non normalized
+> xtable(as.matrix(w), digits=3)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Tue Sep 22 14:21:01 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ & x \\ 
+  \hline
+white & 0.256 \\ 
+  black & 6.514 \\ 
+  sp & 4.293 \\ 
+  Mean\_R & 5.921 \\ 
+  SD\_R & 18.261 \\ 
+  Mean\_G & 9.951 \\ 
+  SD\_G & 26.049 \\ 
+  Mean\_B & 25.743 \\ 
+  SD\_B & 10.172 \\ 
+  Mean\_P & 5.970 \\ 
+  SD\_P & 5.949 \\ 
+  Shape\_circ & 16.183 \\ 
+  Shape\_eccent & 8.237 \\ 
+  Shape\_e1 & 10.534 \\ 
+  Shape\_e2 & 23.454 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> #VarImp based on feature type
+> vars_c<-c(4:9)
+> vars_t<-c(10:11)
+> 
+> #vImp<-matrix(nrow=1, ncol=3, data=0)
+> vImp<-c(0,0,0)
+> names(vImp)<-c("Color", "Texture", "Shape")
+> 
+> vImp[1]<-sum(w[vars_c])
+> vImp[2]<-sum(w[vars_t])
+> vImp[3]<-sum(w[-c(vars_t, vars_c)])
+> 
+> vImp_sort <- sort(vImp, decreasing = T)
+> 
+> xtable(t(as.matrix(vImp_sort/vImp_sort[1])), digits=3 )
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Tue Sep 22 14:21:01 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Color & Shape & Texture \\ 
+  \hline
+1 & 1.000 & 0.723 & 0.124 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> #
+> 
+> proc.time()
+   user  system elapsed 
+  2.369   0.353   2.178 
