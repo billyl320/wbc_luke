@@ -1,5 +1,5 @@
 # Experiment for ALL-IDB Data
-Includes the experiment performed on the ALL-ODB data.  Includes the code and resulting shape images.  The output is provided in 'output_svm_radial.txt'.  The image processing was performed in Python 3.6.  The modeling was performed in R. Information about packages and R version are provided in 'output_svm_radial.txt'.  Information about the original data is found here: https://homes.di.unimi.it/scotti/all/
+Includes the experiment performed on the ALL-ODB data.  Includes the code and resulting shape images.  The output is provided in 'output_svm_radial.txt'.  The image processing was performed in Python 3.6.9.  The modeling was performed in R. Information about packages and R version are provided in 'output_svm_radial.txt'.  Information about the original data is found here: https://homes.di.unimi.it/scotti/all/
 
 ## Pip3 Packages
 
