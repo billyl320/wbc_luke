@@ -139,27 +139,27 @@ zope.interface (4.3.2) <br />
 
 Below is the output of my Ubuntu machine where the experiments were performed on 9/22/2020.  
 
-Architecture:        x86_64
-CPU op-mode(s):      32-bit, 64-bit
-Byte Order:          Little Endian
-CPU(s):              8
-On-line CPU(s) list: 0-7
-Thread(s) per core:  2
-Core(s) per socket:  4
-Socket(s):           1
-NUMA node(s):        1
-Vendor ID:           GenuineIntel
-CPU family:          6
-Model:               42
-Model name:          Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz
-Stepping:            7
-CPU MHz:             1922.294
-CPU max MHz:         3800.0000
-CPU min MHz:         1600.0000
-BogoMIPS:            6784.93
-Virtualization:      VT-x
-L1d cache:           32K
-L1i cache:           32K
-L2 cache:            256K
-L3 cache:            8192K
-NUMA node0 CPU(s):   0-7
+Architecture:        x86_64 <br />
+CPU op-mode(s):      32-bit, 64-bit <br />
+Byte Order:          Little Endian <br />
+CPU(s):              8 <br />
+On-line CPU(s) list: 0-7 <br />
+Thread(s) per core:  2 <br />
+Core(s) per socket:  4 <br />
+Socket(s):           1 <br />
+NUMA node(s):        1 <br />
+Vendor ID:           GenuineIntel <br />
+CPU family:          6 <br />
+Model:               42 <br />
+Model name:          Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz <br />
+Stepping:            7 <br />
+CPU MHz:             1922.294 <br />
+CPU max MHz:         3800.0000 <br />
+CPU min MHz:         1600.0000 <br />
+BogoMIPS:            6784.93 <br />
+Virtualization:      VT-x <br />
+L1d cache:           32K <br />
+L1i cache:           32K <br />
+L2 cache:            256K <br />
+L3 cache:            8192K <br />
+NUMA node0 CPU(s):   0-7 <br />
