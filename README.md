@@ -137,7 +137,7 @@ zope.interface (4.3.2) <br />
 
 ## lscpu
 
-Below is the output of my Ubuntu machine where the experiments were performed on 9/22/2020.  
+Below is the output of my Ubuntu Dell Optiplex 990 machine where the experiments were performed on 9/22/2020.  
 
 Architecture:        x86_64 <br />
 CPU op-mode(s):      32-bit, 64-bit <br />
