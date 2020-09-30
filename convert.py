@@ -9,6 +9,7 @@ from skimage import filters
 from skimage import feature
 from skimage.color import label2rgb
 from skimage.feature import corner_harris, corner_peaks
+from skimage import exposure
 import os
 import math
 import colorsys
@@ -65,6 +66,11 @@ def Metrics(orig):
     return eccen, evls[0], evls[1]
 
 def Shapes(pic):
+    #clean image
+    #pic = nd.gaussian_filter(pic, sigma=1.5)
+    #pic = (pic > 0.99) +0.0
+    #pic = (nd.binary_erosion(pic , iterations=20))+0.0
+    #pic = (nd.binary_dilation(pic , iterations=20))+0.0
     #setup
     shapes = np.zeros((1,14))
     #obtain circularity
@@ -98,7 +104,7 @@ def Shapes(pic):
 #extract color metrics; requires shape to be extracted first
 def Colors(pic, mask):
     #setup
-    colors = np.zeros((1,6))
+    colors = np.zeros((1,14))
     #convert color image to 3 extracted channels of r, g, b
     r = pic[:,:,0]
     g = pic[:,:,1]
@@ -112,6 +118,20 @@ def Colors(pic, mask):
     colors[0][3] = g.flatten()[vals].std()
     colors[0][4] = b.flatten()[vals].mean()
     colors[0][5] = b.flatten()[vals].std()
+    #now collecting cmyk
+    pic_new = rgb2cmyk(pic)
+    c = pic_new[:,:,0]
+    m = pic_new[:,:,1]
+    y = pic_new[:,:,2]
+    k = pic_new[:,:,3]
+    colors[0][6] = c.flatten()[vals].mean()
+    colors[0][7] = c.flatten()[vals].std()
+    colors[0][8] = m.flatten()[vals].mean()
+    colors[0][9] = m.flatten()[vals].std()
+    colors[0][10] = y.flatten()[vals].mean()
+    colors[0][11] = y.flatten()[vals].std()
+    colors[0][12] = k.flatten()[vals].mean()
+    colors[0][13] = k.flatten()[vals].std()
     return colors
 
 #performs needed setup for other functions
@@ -122,22 +142,33 @@ def bin_edges (fname, bname):#, thresh=2 ):
     adata = sm.imread(fname, flatten=True)
     #find edges
     gdata= np.abs(np.gradient( adata ))
-    val = 7.00
+    val = 6.00
     ddata = ((gdata[0]>val) + (gdata[1]>val) +0.0)+0.0
     ############
     #fill holes
     ############
     shape = nd.binary_fill_holes(ddata+0.0) + 0.0
-    ##################
-    #get largest shape
-    ###################
-    b, n = nd.label(shape+0.0)
+    #################################
+    #get shape closest to the center
+    #################################
+    pic = shape +0.0
+    b, n = nd.label((pic>0.0)+0.0)
+    #finding center of image
+    v, h = pic.shape
+    #creating distance reference image
+    z = np.ones((v,h))+0
+    z[v//2,h//2] = 0
+    dist = nd.distance_transform_edt(z)
+    #getting shapes times distance from center of image
+    vals = dist*pic
     #finding biggest shapes (except 0s)
     simp = np.hstack(b)
     locs= np.nonzero( simp )
     counts=np.bincount(simp [locs] )
     vals=counts.argsort()[-3:][::-1]
     clist = list(map(lambda x: b==x, (0,vals[0]) ))
+    shape = (clist[1]+0)
+    sm.imsave(bname+fname[53:-3]+'png', shape+0.0)
     shape = (clist[1]+0)
     ############
     #fill holes
@@ -147,34 +178,89 @@ def bin_edges (fname, bname):#, thresh=2 ):
     sm.imsave(bname+fname[53:-3]+'png', shape+0.0)
     return shape
 
+#does this for each pixel
+def rgb_to_cmyk(r, g, b):
+    RGB_SCALE = 255
+    CMYK_SCALE = 255
+    if (r, g, b) == (0, 0, 0):
+        # black
+        return 0, 0, 0, CMYK_SCALE
+    # rgb [0,255] -> cmy [0,1]
+    c = 1 - r / RGB_SCALE
+    m = 1 - g / RGB_SCALE
+    y = 1 - b / RGB_SCALE
+    # extract out k [0, 1]
+    min_cmy = min(c, m, y)
+    c = (c - min_cmy) / (1 - min_cmy)
+    m = (m - min_cmy) / (1 - min_cmy)
+    y = (y - min_cmy) / (1 - min_cmy)
+    k = min_cmy
+    # rescale to the range [0,CMYK_SCALE]
+    return c * CMYK_SCALE, m * CMYK_SCALE, y * CMYK_SCALE, k * CMYK_SCALE
+
+
+#this is mine
+#input image of rgb and computes new values for each pixel
+def rgb2cmyk(pic):
+    v,h,d = pic.shape
+    new_pic = np.zeros((v, h, 4))
+    for i in range(v):
+        for j in range(h):
+            new_pic[i,j,0], new_pic[i,j,1], new_pic[i,j,2], new_pic[i,j,3] = rgb_to_cmyk(pic[i,j,0], pic[i,j,1], pic[i,j,2])
+    return new_pic
+
 #performs needed setup for other functions
 #also provides binary edges info
 #must use first
 def otsu(fname, bname):
     #read in image as bw
-    adata = sm.imread(fname, flatten=True)
-    #apply sobel edge detection
-    val = filters.threshold_otsu(adata)
-    bdata = adata < val
+    adata = sm.imread(fname, flatten=False)
+    #convert rgb to cmyk color space
+    adata_new = rgb2cmyk(adata)
+    ###########################
+    #Max Convolution
+    ###########################
+    adata_smo = nd.maximum_filter(adata_new[:,:,2], size=3)
+    #from https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html
+    ###########################
+    #Contrast stretching
+    ###########################
+    p2, p98 = np.percentile(adata_smo, (2, 98))
+    img_rescale = exposure.rescale_intensity(adata_smo, in_range=(p2, p98))
+    #from https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html
+    ###########################
+    #Histogram Equalization
+    ###########################
+    img_eq = exposure.equalize_hist(adata_smo)
+    ###########################
+    #Combine Images
+    ###########################
+    adata_ultima = (2*img_rescale) + img_eq
+    ###########################
+    #Apply Otsu on Combined Images
+    ###########################
+    val = filters.threshold_otsu(adata_ultima)
+    bdata = adata_ultima < val
     edg = bdata + 0.0
     ##################
     #erode shape
     ###################
-    pic = (nd.binary_erosion(edg , iterations=5))+0.0
+    #pic = (nd.binary_erosion(edg , iterations=1))+0.0
     ##################
     #get largest shape
     ###################
-    b, n = nd.label((pic>0.0)+0.0)
+    #b, n = nd.label((pic>0.0)+0.0)
     #finding biggest shapes (except 0s)
-    simp = np.hstack(b)
-    locs= np.nonzero( simp )
-    counts=np.bincount(simp [locs] )
-    vals=counts.argsort()[-3:][::-1]
-    clist = list(map(lambda x: b==x, (0,vals[0]) ))
-    shape = (clist[1]+0)
+    #simp = np.hstack(b)
+    #locs= np.nonzero( simp )
+    #counts=np.bincount(simp [locs] )
+    #vals=counts.argsort()[-3:][::-1]
+    #clist = list(map(lambda x: b==x, (0,vals[0]) ))
+    #shape = (clist[1]+0)
     #################################
     #get shape closest to the center
     #################################
+    pic = edg + 0.0
     b, n = nd.label((pic>0.0)+0.0)
     #finding center of image
     v, h = pic.shape
@@ -198,9 +284,84 @@ def otsu(fname, bname):
 #segments image based on color
 def simp(fname, bname):
     #read in image as bw
+    adata = sm.imread(fname, flatten=False)
+    #convert rgb to cmyk color space
+    adata_new = rgb2cmyk(adata)
+    ###########################
+    #Max Convolution
+    ###########################
+    adata_smo = nd.maximum_filter(adata_new[:,:,2], size=5)
+    #from https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html
+    ###########################
+    #Contrast stretching
+    ###########################
+    p2, p98 = np.percentile(adata_smo, (2, 98))
+    img_rescale = exposure.rescale_intensity(adata_smo, in_range=(p2, p98))
+    #from https://scikit-image.org/docs/dev/auto_examples/color_exposure/plot_equalize.html
+    ###########################
+    #Histogram Equalization
+    ###########################
+    img_eq = exposure.equalize_hist(adata_smo)
+    ###########################
+    #Combine Images
+    ###########################
+    adata_ultima = (2*img_rescale) + img_eq
+    ###########################
+    #Apply Simple Thresholding
+    ###########################
+    bdata = adata_ultima < (adata_ultima.min()+0.01)
+    shape = bdata + 0.0
+    #################################
+    #get shape closest to the center
+    #################################
+    pic = shape + 0.0
+    b, n = nd.label((pic>0.0)+0.0)
+    #finding center of image
+    v, h = pic.shape
+    #creating distance reference image
+    z = np.ones((v,h))+0
+    z[v//2,h//2] = 0
+    dist = nd.distance_transform_edt(z)
+    #getting shapes times distance from center of image
+    vals = dist*pic
+    #finding biggest shapes (except 0s)
+    simp = np.hstack(b)
+    locs= np.nonzero( simp )
+    counts=np.bincount(simp [locs] )
+    vals=counts.argsort()[-3:][::-1]
+    clist = list(map(lambda x: b==x, (0,vals[0]) ))
+    shape = (clist[1]+0)
+    sm.imsave(bname+fname[53:-3]+'png', shape+0.0)
+    return shape
+
+#performs needed setup for other functions
+#segments image using adaptive thresholding
+def adapt(fname, bname):
+    #read in image as bw
     adata = sm.imread(fname, flatten=True)
     #apply thresholding
-    shape  = (adata<100.0)+0.0
+    shape  = threshold_adaptive(adata, 20, 5)
+    #################################
+    #get shape closest to the center
+    #################################
+    pic = shape + 0.0
+    b, n = nd.label((pic>0.0)+0.0)
+    #finding center of image
+    v, h = pic.shape
+    #creating distance reference image
+    z = np.ones((v,h))+0
+    z[v//2,h//2] = 0
+    dist = nd.distance_transform_edt(z)
+    #getting shapes times distance from center of image
+    vals = dist*pic
+    #finding biggest shapes (except 0s)
+    simp = np.hstack(b)
+    locs= np.nonzero( simp )
+    counts=np.bincount(simp [locs] )
+    vals=counts.argsort()[-3:][::-1]
+    clist = list(map(lambda x: b==x, (0,vals[0]) ))
+    shape = (clist[1]+0)
+    sm.imsave(bname+fname[53:-3]+'png', shape+0.0)
     return shape
 
 #from Kinser, 2018, texture.py
@@ -226,7 +387,7 @@ def Textures(pic, mask):
     texture[0][1] = mat.std()
     return texture
 
-#getting all image files 
+#getting all .pgm's and .png's
 def GetPicNames( indir ):
     a = os.listdir( indir )
     pgmnames= []
@@ -349,7 +510,7 @@ def BinaryColorTXT(tname, dirs, og):
     #get image names
     name = tname + "_COLORS.txt"
     #save as txt
-    np.savetxt(name, np.vstack(colors), delimiter=',', header="Mean_R, SD_R, Mean_G, SD_G, Mean_B, SD_B", comments='')
+    np.savetxt(name, np.vstack(colors), delimiter=',', header="Mean_R, SD_R, Mean_G, SD_G, Mean_B, SD_B, Mean_C, SD_C, Mean_M, SD_M, Mean_Y, SD_Y, Mean_K, SD_K", comments='')
 
 #save texture metrics .txt
 def BinaryTextureTXT(tname, dirs, og):

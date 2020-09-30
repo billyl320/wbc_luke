@@ -52,7 +52,7 @@ train<-as.data.frame(cbind(as.factor(labs), temp))
 colnames(train)[1]<-"labs_svm"
 
 #variables to keep
-keep<-c(1:16)
+keep<-c(1:25)
 
 #now let's tune the svm model using 5-folds on t-set and validaiton
 
@@ -62,8 +62,8 @@ keep2<-which(train$labs_svm==1)
 keep3<-which(train$labs_svm==2)
 
 #80% for training and 20% for validation
-obs_1 = keep2[1:floor(length(keep2)*0.80)]
-obs_2 = keep3[1:floor(length(keep3)*0.80)]
+obs_1 = sample(keep2, floor(length(keep2)*0.80) )
+obs_2 = sample(keep3, floor(length(keep3)*0.80) )
 
 obs<-c(obs_1, obs_2)
 
@@ -72,8 +72,8 @@ tc <- tune.control(cross = 5)
 tune.out<-tune(svm, as.factor(labs_svm) ~.,
           data=train[obs, keep],
           kernel='radial',
-          ranges=list(cost=c(1:2),
-                      gamma=c(1/dim(train)[1], 1/dim(train[,keep])[2], 1/11, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2, 10 )
+          ranges=list(cost=c(1:2, 5, 10),
+                      gamma=c(1/dim(train)[1], 1/dim(train[,keep])[2], 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.75, 1, 1.5 )
                       ) ,
           tunecontrol = tc)
 
@@ -99,7 +99,7 @@ w <- apply(w, 2, function(v){sqrt(sum(v^2))})                   # weight
 w_sort <- sort(w, decreasing = T)
 
 #max weight
-w_max<-(w[1])
+w_max<-(w_sort[1])
 
 #normalized weights relative to the max
 w_norm<- w_sort / w_max
@@ -113,8 +113,8 @@ xtable(as.matrix(w_norm), digits=3)
 xtable(as.matrix(w), digits=3)
 
 #VarImp based on feature type
-vars_c<-c(4:9)
-vars_t<-c(10:11)
+vars_c<-c(4:17)
+vars_t<-c(18:19)
 
 #vImp<-matrix(nrow=1, ncol=3, data=0)
 vImp<-c(0,0,0)
