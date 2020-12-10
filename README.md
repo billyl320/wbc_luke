@@ -136,7 +136,7 @@ zope.interface (4.3.2)<br />
 
 ## lscpu
 
-Below is the output of my Ubuntu Nuc machine where the experiments were performed on 10/7/2020.  
+Below is the output of my Ubuntu Nuc machine where the experiments were performed on 12/4/2020.  
 
 Architecture:        x86_64 <br />
 CPU op-mode(s):      32-bit, 64-bit <br />
