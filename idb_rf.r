@@ -81,14 +81,15 @@ grid <- expand.grid(mtry=c(1:10))
 tune.out<-train(as.factor(labs_svm) ~.,
           data=train[obs, keep],
           method='rf',
+          importance=TRUE,
           trControl = tc,
           tuneGrid=grid)
 
 #print results
 print(tune.out)
 
-w<-(tune.out$finalModel$importance)
-w_sort <- w[order(-w[,1]), , drop = FALSE]
+w<-as.matrix(tune.out$finalModel$importance[,3])
+w_sort<-w[order(-w[,1]), , drop = FALSE]
 
 #max weight
 w_max<-(w_sort[1])
