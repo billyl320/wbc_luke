@@ -61,7 +61,7 @@ colnames(train)[1]<-"labs_svm"
 #variables to keep
 keep<-c(1:25)
 
-#now let's tune the svm model using 10-folds on t-set and validaiton
+#now let's tune the svm model using 5-folds on t-set and validaiton
 
 set.seed(22773)
 
@@ -76,7 +76,7 @@ obs<-c(obs_1, obs_2)
 
 #cv setup
 tc <- trainControl(method='cv',
-                  number = 10,
+                  number = 5,
                   search='grid')
 
 grid <- expand.grid(mtry=c(1:10))
@@ -85,14 +85,15 @@ grid <- expand.grid(mtry=c(1:10))
 tune.out<-train(as.factor(labs_svm) ~.,
           data=train[obs, keep],
           method='rf',
+          importance=TRUE,
           trControl = tc,
           tuneGrid=grid)
 
 #print results
 print(tune.out)
 
-w<-(tune.out$finalModel$importance)
-w_sort <- w[order(-w[,1]), , drop = FALSE]
+w<-as.matrix(tune.out$finalModel$importance[,3])
+w_sort<-w[order(-w[,1]), , drop = FALSE]
 
 #max weight
 w_max<-(w_sort[1])

@@ -158,6 +158,7 @@ loaded via a namespace (and not attached):
 > tune.out<-train(as.factor(labs_svm) ~.,
 +           data=train[obs, keep],
 +           method='rf',
++           importance=TRUE,
 +           trControl = tc,
 +           tuneGrid=grid)
 > 
@@ -175,22 +176,22 @@ Summary of sample sizes: 6822, 6822, 6823, 6823, 6822
 Resampling results across tuning parameters:
 
   mtry  Accuracy   Kappa    
-   1    0.8645643  0.6635898
-   2    0.8951704  0.7497183
-   3    0.8977493  0.7570616
-   4    0.8997428  0.7623954
-   5    0.8989223  0.7608564
-   6    0.8972803  0.7569548
-   7    0.8979837  0.7588193
-   8    0.8978665  0.7586886
-   9    0.8975146  0.7576586
-  10    0.8971630  0.7569580
+   1    0.8623355  0.6572435
+   2    0.8962247  0.7525270
+   3    0.8979842  0.7577121
+   4    0.8998601  0.7625649
+   5    0.8984527  0.7596688
+   6    0.8982187  0.7591477
+   7    0.8981010  0.7592737
+   8    0.8982181  0.7594449
+   9    0.8968113  0.7562453
+  10    0.8968109  0.7563861
 
 Accuracy was used to select the optimal model using the largest value.
 The final value used for the model was mtry = 4.
 > 
-> w<-(tune.out$finalModel$importance)
-> w_sort <- w[order(-w[,1]), , drop = FALSE]
+> w<-as.matrix(tune.out$finalModel$importance[,3])
+> w_sort<-w[order(-w[,1]), , drop = FALSE]
 > 
 > #max weight
 > w_max<-(w_sort[1])
@@ -202,35 +203,35 @@ The final value used for the model was mtry = 4.
 > #normalized
 > xtable(as.matrix(w_norm), digits=3)
 % latex table generated in R 3.4.4 by xtable 1.8-4 package
-% Fri Dec  4 15:59:53 2020
+% Thu Dec 10 16:26:43 2020
 \begin{table}[ht]
 \centering
 \begin{tabular}{rr}
   \hline
- & MeanDecreaseGini \\ 
+ & x \\ 
   \hline
 white & 1.000 \\ 
-  Shape\_e2 & 0.531 \\ 
-  Shape\_e1 & 0.503 \\ 
-  black & 0.424 \\ 
-  SD\_P & 0.209 \\ 
-  Mean\_P & 0.182 \\ 
-  sp & 0.150 \\ 
-  Mean\_B & 0.148 \\ 
-  Mean\_K & 0.140 \\ 
-  Shape\_corn & 0.130 \\ 
-  Shape\_circ & 0.128 \\ 
-  SD\_M & 0.124 \\ 
-  Mean\_R & 0.122 \\ 
-  Shape\_eccent & 0.120 \\ 
-  Mean\_M & 0.119 \\ 
-  Mean\_C & 0.118 \\ 
-  Mean\_G & 0.112 \\ 
-  SD\_G & 0.105 \\ 
-  SD\_R & 0.102 \\ 
-  SD\_B & 0.100 \\ 
-  SD\_K & 0.098 \\ 
-  SD\_C & 0.096 \\ 
+  Shape\_e2 & 0.664 \\ 
+  Shape\_e1 & 0.614 \\ 
+  Mean\_B & 0.436 \\ 
+  black & 0.427 \\ 
+  Mean\_K & 0.414 \\ 
+  Mean\_R & 0.265 \\ 
+  Mean\_P & 0.250 \\ 
+  Mean\_G & 0.248 \\ 
+  SD\_M & 0.247 \\ 
+  SD\_P & 0.245 \\ 
+  Shape\_corn & 0.204 \\ 
+  SD\_K & 0.176 \\ 
+  Mean\_M & 0.175 \\ 
+  SD\_B & 0.165 \\ 
+  Shape\_circ & 0.162 \\ 
+  SD\_G & 0.154 \\ 
+  sp & 0.129 \\ 
+  Mean\_C & 0.103 \\ 
+  SD\_R & 0.088 \\ 
+  Shape\_eccent & 0.060 \\ 
+  SD\_C & 0.056 \\ 
   Mean\_Y & 0.000 \\ 
   SD\_Y & 0.000 \\ 
    \hline
@@ -241,37 +242,37 @@ white & 1.000 \\
 > #non normalized
 > xtable(as.matrix(w), digits=3)
 % latex table generated in R 3.4.4 by xtable 1.8-4 package
-% Fri Dec  4 15:59:54 2020
+% Thu Dec 10 16:26:43 2020
 \begin{table}[ht]
 \centering
 \begin{tabular}{rr}
   \hline
- & MeanDecreaseGini \\ 
+ & x \\ 
   \hline
-white & 776.610 \\ 
-  black & 329.067 \\ 
-  sp & 116.118 \\ 
-  Mean\_R & 94.899 \\ 
-  SD\_R & 78.860 \\ 
-  Mean\_G & 87.012 \\ 
-  SD\_G & 81.714 \\ 
-  Mean\_B & 115.138 \\ 
-  SD\_B & 77.443 \\ 
-  Mean\_C & 91.530 \\ 
-  SD\_C & 74.432 \\ 
-  Mean\_M & 92.552 \\ 
-  SD\_M & 96.649 \\ 
-  Mean\_Y & 0.264 \\ 
-  SD\_Y & 0.230 \\ 
-  Mean\_K & 108.360 \\ 
-  SD\_K & 75.739 \\ 
-  Mean\_P & 141.695 \\ 
-  SD\_P & 162.065 \\ 
-  Shape\_circ & 99.783 \\ 
-  Shape\_eccent & 93.253 \\ 
-  Shape\_e1 & 391.015 \\ 
-  Shape\_e2 & 412.622 \\ 
-  Shape\_corn & 101.016 \\ 
+white & 0.083 \\ 
+  black & 0.035 \\ 
+  sp & 0.011 \\ 
+  Mean\_R & 0.022 \\ 
+  SD\_R & 0.007 \\ 
+  Mean\_G & 0.021 \\ 
+  SD\_G & 0.013 \\ 
+  Mean\_B & 0.036 \\ 
+  SD\_B & 0.014 \\ 
+  Mean\_C & 0.009 \\ 
+  SD\_C & 0.005 \\ 
+  Mean\_M & 0.015 \\ 
+  SD\_M & 0.021 \\ 
+  Mean\_Y & 0.000 \\ 
+  SD\_Y & 0.000 \\ 
+  Mean\_K & 0.034 \\ 
+  SD\_K & 0.015 \\ 
+  Mean\_P & 0.021 \\ 
+  SD\_P & 0.020 \\ 
+  Shape\_circ & 0.013 \\ 
+  Shape\_eccent & 0.005 \\ 
+  Shape\_e1 & 0.051 \\ 
+  Shape\_e2 & 0.055 \\ 
+  Shape\_corn & 0.017 \\ 
    \hline
 \end{tabular}
 \end{table}
@@ -292,72 +293,72 @@ white & 776.610 \\
 > 
 > xtable(t(as.matrix(vImp_sort/vImp_sort[1])), digits=3 )
 % latex table generated in R 3.4.4 by xtable 1.8-4 package
-% Fri Dec  4 15:59:54 2020
+% Thu Dec 10 16:26:43 2020
 \begin{table}[ht]
 \centering
 \begin{tabular}{rrrr}
   \hline
  & Shape & Color & Texture \\ 
   \hline
-1 & 1.000 & 0.463 & 0.131 \\ 
+1 & 1.000 & 0.776 & 0.152 \\ 
    \hline
 \end{tabular}
 \end{table}
 > 
 > 
 > varImp(tune.out$finalModel)
-                 Overall
-white        776.6104029
-black        329.0673827
-sp           116.1182159
-Mean_R        94.8994094
-SD_R          78.8597046
-Mean_G        87.0117789
-SD_G          81.7139875
-Mean_B       115.1379894
-SD_B          77.4425228
-Mean_C        91.5303283
-SD_C          74.4321072
-Mean_M        92.5520120
-SD_M          96.6488542
-Mean_Y         0.2638123
-SD_Y           0.2300611
-Mean_K       108.3597403
-SD_K          75.7387912
-Mean_P       141.6949406
-SD_P         162.0651448
-Shape_circ    99.7826737
-Shape_eccent  93.2526460
-Shape_e1     391.0149076
-Shape_e2     412.6222045
-Shape_corn   101.0162048
+                      0          1
+white        79.3070623 79.3070623
+black        33.0680081 33.0680081
+sp           17.6631586 17.6631586
+Mean_R       19.4756563 19.4756563
+SD_R         17.0146751 17.0146751
+Mean_G       17.2710179 17.2710179
+SD_G         17.5253433 17.5253433
+Mean_B       21.4304722 21.4304722
+SD_B         17.5147002 17.5147002
+Mean_C       20.6061415 20.6061415
+SD_C         18.6618700 18.6618700
+Mean_M       20.5861009 20.5861009
+SD_M         24.1036931 24.1036931
+Mean_Y        0.7564836  0.7564836
+SD_Y          0.7085031  0.7085031
+Mean_K       22.2799685 22.2799685
+SD_K         16.9704457 16.9704457
+Mean_P       18.2721253 18.2721253
+SD_P         19.8109374 19.8109374
+Shape_circ   19.4707798 19.4707798
+Shape_eccent 18.0097642 18.0097642
+Shape_e1     56.9870579 56.9870579
+Shape_e2     58.5441282 58.5441282
+Shape_corn   16.4846829 16.4846829
 > 
 > varImp(tune.out)
 rf variable importance
 
   only 20 most important variables shown (out of 24)
 
-             Overall
-white        100.000
-Shape_e2      53.117
-Shape_e1      50.334
-black         42.355
-SD_P          20.845
-Mean_P        18.221
-sp            14.927
-Mean_B        14.800
-Mean_K        13.927
-Shape_corn    12.982
-Shape_circ    12.823
-SD_M          12.419
-Mean_R        12.194
-Shape_eccent  11.982
-Mean_M        11.891
-Mean_C        11.760
-Mean_G        11.178
-SD_G          10.495
-SD_R          10.128
-SD_B           9.945
+             Importance
+white            100.00
+Shape_e2          73.58
+Shape_e1          71.60
+black             41.17
+SD_M              29.77
+Mean_K            27.45
+Mean_B            26.36
+Mean_C            25.32
+Mean_M            25.29
+SD_P              24.30
+Mean_R            23.88
+Shape_circ        23.87
+SD_C              22.84
+Mean_P            22.35
+Shape_eccent      22.01
+sp                21.57
+SD_G              21.40
+SD_B              21.38
+Mean_G            21.07
+SD_R              20.75
 > 
 > #output accuracy on training data
 > ypred=predict(tune.out$finalModel ,train[obs,])
@@ -421,7 +422,7 @@ Prediction    0    1
 > 
 > xtable(measures_train)
 % latex table generated in R 3.4.4 by xtable 1.8-4 package
-% Fri Dec  4 15:59:54 2020
+% Thu Dec 10 16:26:43 2020
 \begin{table}[ht]
 \centering
 \begin{tabular}{rrrr}
@@ -443,10 +444,10 @@ Precision    Recall F-1 Score
 > table(predict=ypred, truth=train$labs_svm[-obs])
        truth
 predict    0    1
-      0  523  131
-      1  155 1324
+      0  522  133
+      1  156 1322
 > mean(ypred==train$labs_svm[-obs])
-[1] 0.8659165
+[1] 0.8645101
 > 
 > #confusion matrix for validation data
 > confusionMatrix(ypred, train$labs_svm[-obs])
@@ -454,26 +455,26 @@ Confusion Matrix and Statistics
 
           Reference
 Prediction    0    1
-         0  523  131
-         1  155 1324
+         0  522  133
+         1  156 1322
                                           
-               Accuracy : 0.8659          
-                 95% CI : (0.8507, 0.8801)
+               Accuracy : 0.8645          
+                 95% CI : (0.8493, 0.8788)
     No Information Rate : 0.6821          
     P-Value [Acc > NIR] : <2e-16          
                                           
-                  Kappa : 0.6879          
+                  Kappa : 0.6847          
                                           
- Mcnemar's Test P-Value : 0.1738          
+ Mcnemar's Test P-Value : 0.1956          
                                           
-            Sensitivity : 0.7714          
-            Specificity : 0.9100          
-         Pos Pred Value : 0.7997          
-         Neg Pred Value : 0.8952          
+            Sensitivity : 0.7699          
+            Specificity : 0.9086          
+         Pos Pred Value : 0.7969          
+         Neg Pred Value : 0.8945          
              Prevalence : 0.3179          
-         Detection Rate : 0.2452          
-   Detection Prevalence : 0.3066          
-      Balanced Accuracy : 0.8407          
+         Detection Rate : 0.2447          
+   Detection Prevalence : 0.3071          
+      Balanced Accuracy : 0.8393          
                                           
        'Positive' Class : 0               
                                           
@@ -500,25 +501,25 @@ Prediction    0    1
 > 
 > xtable(measures_valid)
 % latex table generated in R 3.4.4 by xtable 1.8-4 package
-% Fri Dec  4 15:59:54 2020
+% Thu Dec 10 16:26:44 2020
 \begin{table}[ht]
 \centering
 \begin{tabular}{rrrr}
   \hline
  & Precision & Recall & F-1 Score \\ 
   \hline
-0 & 0.80 & 0.77 & 0.79 \\ 
-  1 & 0.90 & 0.91 & 0.90 \\ 
+0 & 0.80 & 0.77 & 0.78 \\ 
+  1 & 0.89 & 0.91 & 0.90 \\ 
    \hline
 \end{tabular}
 \end{table}
 > 
 > colMeans(measures_valid)
 Precision    Recall F-1 Score 
-0.8474468 0.8406760 0.8439037 
+0.8456993 0.8392513 0.8423309 
 > 
 > #
 > 
 > proc.time()
    user  system elapsed 
-321.629   1.838 323.762 
+586.513   1.410 588.020 
