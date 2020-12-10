@@ -1,0 +1,519 @@
+
+R version 3.4.4 (2018-03-15) -- "Someone to Lean On"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> rm(list=ls())
+> 
+> 
+> library(xtable) #for table creation for latex
+> library(e1071)#for svm
+> library(caret)#for more info on training rf
+Loading required package: lattice
+Loading required package: ggplot2
+> library(randomForest)#for more info on training rf
+randomForest 4.6-14
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+> 
+> #reporting session info
+> sessionInfo()
+R version 3.4.4 (2018-03-15)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 18.04.5 LTS
+
+Matrix products: default
+BLAS: /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1
+LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] randomForest_4.6-14 caret_6.0-86        ggplot2_3.2.1      
+[4] lattice_0.20-35     e1071_1.7-3         xtable_1.8-4       
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.3           compiler_3.4.4       pillar_1.4.3        
+ [4] gower_0.2.1          plyr_1.8.5           tools_3.4.4         
+ [7] iterators_1.0.12     class_7.3-15         rpart_4.1-15        
+[10] ipred_0.9-9          lubridate_1.7.8      lifecycle_0.1.0     
+[13] tibble_2.1.3         nlme_3.1-131         gtable_0.3.0        
+[16] pkgconfig_2.0.3      rlang_0.4.4          Matrix_1.2-12       
+[19] foreach_1.5.0        prodlim_2019.11.13   stringr_1.4.0       
+[22] withr_2.1.2          dplyr_0.8.3          pROC_1.16.2         
+[25] generics_0.0.2       recipes_0.1.10       stats4_3.4.4        
+[28] grid_3.4.4           nnet_7.3-13          tidyselect_1.0.0    
+[31] data.table_1.12.8    glue_1.3.1           R6_2.4.1            
+[34] survival_2.41-3      lava_1.6.7           purrr_0.3.3         
+[37] reshape2_1.4.3       magrittr_1.5         ModelMetrics_1.2.2.2
+[40] scales_1.1.0         codetools_0.2-15     MASS_7.3-49         
+[43] splines_3.4.4        assertthat_0.2.1     timeDate_3043.102   
+[46] colorspace_1.4-1     stringi_1.4.5        lazyeval_0.2.2      
+[49] munsell_0.5.0        crayon_1.3.4        
+> 
+> 
+> #shape metrics
+> da_a = read.table('all_SHAPES.txt', sep=',', header=TRUE)
+> da_h = read.table('hem_SHAPES.txt', sep=',', header=TRUE)
+> 
+> data = rbind(da_a, da_h)
+> 
+> #eis
+> ei_a = read.table('all.txt', sep=',', header=TRUE)
+> ei_h = read.table('hem.txt', sep=',', header=TRUE)
+> 
+> ei = rbind(ei_a, ei_h)
+> #obtaining sp values
+> sp<-ei[,1]/(ei[,1]+ei[,2])
+> 
+> #color
+> color_a = read.table('all_COLORS.txt', sep=',', header=TRUE)
+> color_h = read.table('hem_COLORS.txt', sep=',', header=TRUE)
+> 
+> color = rbind(color_a, color_h)
+> 
+> #texture
+> texture_a = read.table('all_TEXTURE.txt', sep=',', header=TRUE)
+> texture_h = read.table('hem_TEXTURE.txt', sep=',', header=TRUE)
+> 
+> texture = rbind(texture_a, texture_h)
+> 
+> labs2<-as.factor(c(
++                   rep("all", dim(ei_a)[1]),
++                   rep("hem", dim(ei_h)[1])    ) )
+> 
+> 
+> labs<-as.factor(c(
++                   rep(1, dim(ei_a)[1]),
++                   rep(0, dim(ei_h)[1])    ) )
+> 
+> #counts plot
+> temp<-as.data.frame(cbind(ei,sp, color, texture, data))
+> 
+> 
+> #setup for rf model
+> 
+> train<-as.data.frame(cbind(as.factor(labs), temp))
+> colnames(train)[1]<-"labs_svm"
+> 
+> #variables to keep
+> keep<-c(1:25)
+> 
+> #now let's tune the svm model using 5-folds on t-set and validaiton
+> 
+> set.seed(2405)
+> 
+> keep2<-which(train$labs_svm==1)
+> keep3<-which(train$labs_svm==0)
+> 
+> #80% for training and 20% for validation
+> obs_1 = keep2[1:floor(length(keep2)*0.80)]
+> obs_2 = keep3[1:floor(length(keep3)*0.80)]
+> 
+> obs<-c(obs_1, obs_2)
+> 
+> #cv setup
+> tc <- trainControl(method='cv',
++                   number = 5,
++                   search='grid')
+> 
+> grid <- expand.grid(mtry=c(1:10))
+> 
+> #perform cv random forest
+> tune.out<-train(as.factor(labs_svm) ~.,
++           data=train[obs, keep],
++           method='rf',
++           trControl = tc,
++           tuneGrid=grid)
+> 
+> #print results
+> print(tune.out)
+Random Forest 
+
+208 samples
+ 24 predictor
+  2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold) 
+Summary of sample sizes: 166, 166, 167, 167, 166 
+Resampling results across tuning parameters:
+
+  mtry  Accuracy   Kappa    
+   1    0.9566783  0.9132401
+   2    0.9663182  0.9325608
+   3    0.9711963  0.9423577
+   4    0.9663182  0.9325608
+   5    0.9663182  0.9325608
+   6    0.9663182  0.9325608
+   7    0.9663182  0.9325608
+   8    0.9614402  0.9227405
+   9    0.9614402  0.9227405
+  10    0.9469222  0.8935761
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was mtry = 3.
+> 
+> w<-(tune.out$finalModel$importance)
+> w_sort <- w[order(-w[,1]), , drop = FALSE]
+> 
+> #max weight
+> w_max<-(w_sort[1])
+> 
+> #normalized weights relative to the max
+> w_norm<- w_sort / w_max
+> 
+> #table for Latex
+> #normalized
+> xtable(as.matrix(w_norm), digits=3)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Fri Dec  4 15:53:38 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ & MeanDecreaseGini \\ 
+  \hline
+white & 1.000 \\ 
+  Mean\_M & 0.936 \\ 
+  SD\_B & 0.913 \\ 
+  Shape\_e2 & 0.887 \\ 
+  SD\_K & 0.872 \\ 
+  Mean\_K & 0.532 \\ 
+  Shape\_circ & 0.529 \\ 
+  Mean\_B & 0.501 \\ 
+  Mean\_G & 0.442 \\ 
+  Shape\_e1 & 0.414 \\ 
+  SD\_G & 0.309 \\ 
+  SD\_M & 0.306 \\ 
+  SD\_P & 0.302 \\ 
+  sp & 0.275 \\ 
+  Mean\_C & 0.254 \\ 
+  SD\_R & 0.247 \\ 
+  Shape\_corn & 0.240 \\ 
+  SD\_C & 0.236 \\ 
+  Mean\_P & 0.233 \\ 
+  black & 0.227 \\ 
+  Mean\_R & 0.189 \\ 
+  Shape\_eccent & 0.139 \\ 
+  SD\_Y & 0.003 \\ 
+  Mean\_Y & 0.002 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> #table for Latex
+> #non normalized
+> xtable(as.matrix(w), digits=3)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Fri Dec  4 15:53:38 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ & MeanDecreaseGini \\ 
+  \hline
+white & 10.369 \\ 
+  black & 2.357 \\ 
+  sp & 2.852 \\ 
+  Mean\_R & 1.955 \\ 
+  SD\_R & 2.556 \\ 
+  Mean\_G & 4.585 \\ 
+  SD\_G & 3.205 \\ 
+  Mean\_B & 5.200 \\ 
+  SD\_B & 9.466 \\ 
+  Mean\_C & 2.630 \\ 
+  SD\_C & 2.446 \\ 
+  Mean\_M & 9.705 \\ 
+  SD\_M & 3.169 \\ 
+  Mean\_Y & 0.022 \\ 
+  SD\_Y & 0.026 \\ 
+  Mean\_K & 5.519 \\ 
+  SD\_K & 9.042 \\ 
+  Mean\_P & 2.413 \\ 
+  SD\_P & 3.135 \\ 
+  Shape\_circ & 5.484 \\ 
+  Shape\_eccent & 1.439 \\ 
+  Shape\_e1 & 4.296 \\ 
+  Shape\_e2 & 9.193 \\ 
+  Shape\_corn & 2.492 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> #VarImp based on feature type
+> vars_c<-c(4:17)
+> vars_t<-c(18:19)
+> 
+> #vImp<-matrix(nrow=1, ncol=3, data=0)
+> vImp<-c(0,0,0)
+> names(vImp)<-c("Color", "Texture", "Shape")
+> 
+> vImp[1]<-sum(w[vars_c])
+> vImp[2]<-sum(w[vars_t])
+> vImp[3]<-sum(w[-c(vars_t, vars_c)])
+> 
+> vImp_sort <- sort(vImp, decreasing = T)
+> 
+> xtable(t(as.matrix(vImp_sort/vImp_sort[1])), digits=3 )
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Fri Dec  4 15:53:38 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Color & Shape & Texture \\ 
+  \hline
+1 & 1.000 & 0.646 & 0.093 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> varImp(tune.out$finalModel)
+                 Overall
+white        10.36862427
+black         2.35741015
+sp            2.85181870
+Mean_R        1.95510172
+SD_R          2.55590955
+Mean_G        4.58474379
+SD_G          3.20496385
+Mean_B        5.19971366
+SD_B          9.46582106
+Mean_C        2.63042471
+SD_C          2.44635964
+Mean_M        9.70548251
+SD_M          3.16928868
+Mean_Y        0.02188684
+SD_Y          0.02637520
+Mean_K        5.51946015
+SD_K          9.04187906
+Mean_P        2.41270204
+SD_P          3.13507601
+Shape_circ    5.48376470
+Shape_eccent  1.43944255
+Shape_e1      4.29631676
+Shape_e2      9.19277798
+Shape_corn    2.49188719
+> 
+> varImp(tune.out)
+rf variable importance
+
+  only 20 most important variables shown (out of 24)
+
+           Overall
+white       100.00
+Mean_M       93.59
+SD_B         91.27
+Shape_e2     88.64
+SD_K         87.18
+Mean_K       53.13
+Shape_circ   52.79
+Mean_B       50.04
+Mean_G       44.10
+Shape_e1     41.31
+SD_G         30.76
+SD_M         30.42
+SD_P         30.09
+sp           27.35
+Mean_C       25.21
+SD_R         24.49
+Shape_corn   23.87
+SD_C         23.43
+Mean_P       23.11
+black        22.57
+> 
+> #output accuracy on training data
+> ypred=predict(tune.out$finalModel ,train[obs,])
+> table(predict=ypred, truth=train$labs_svm[obs])
+       truth
+predict   0   1
+      0 104   0
+      1   0 104
+> mean(ypred==train$labs_svm[obs])
+[1] 1
+> 
+> #confusion matrix
+> confusionMatrix(ypred, train$labs_svm[obs])
+Confusion Matrix and Statistics
+
+          Reference
+Prediction   0   1
+         0 104   0
+         1   0 104
+                                     
+               Accuracy : 1          
+                 95% CI : (0.9824, 1)
+    No Information Rate : 0.5        
+    P-Value [Acc > NIR] : < 2.2e-16  
+                                     
+                  Kappa : 1          
+                                     
+ Mcnemar's Test P-Value : NA         
+                                     
+            Sensitivity : 1.0        
+            Specificity : 1.0        
+         Pos Pred Value : 1.0        
+         Neg Pred Value : 1.0        
+             Prevalence : 0.5        
+         Detection Rate : 0.5        
+   Detection Prevalence : 0.5        
+      Balanced Accuracy : 1.0        
+                                     
+       'Positive' Class : 0          
+                                     
+> 
+> #setup matrix to collect scores
+> measures_train<-matrix(nrow=2, ncol=3, data=0 )
+> rownames(measures_train)<-c('0', '1')
+> colnames(measures_train)<-c("Precision", "Recall", "F-1 Score")
+> 
+> #collecting measures
+> precision <- posPredValue(ypred, train$labs_svm[obs], positive="0")
+> recall <- sensitivity(ypred, train$labs_svm[obs], positive="0")
+> F1 <- (2 * precision * recall) / (precision + recall)
+> measures_train[1,1]<-precision
+> measures_train[1,2]<-recall
+> measures_train[1,3]<-F1
+> 
+> precision <- posPredValue(ypred, train$labs_svm[obs], positive="1")
+> recall <- sensitivity(ypred, train$labs_svm[obs], positive="1")
+> F1 <- (2 * precision * recall) / (precision + recall)
+> measures_train[2,1]<-precision
+> measures_train[2,2]<-recall
+> measures_train[2,3]<-F1
+> 
+> xtable(measures_train)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Fri Dec  4 15:53:39 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Precision & Recall & F-1 Score \\ 
+  \hline
+0 & 1.00 & 1.00 & 1.00 \\ 
+  1 & 1.00 & 1.00 & 1.00 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> colMeans(measures_train)
+Precision    Recall F-1 Score 
+        1         1         1 
+> 
+> #collecting accuracy on validation data
+> ypred=predict(tune.out$finalModel ,train[-obs,])
+> table(predict=ypred, truth=train$labs_svm[-obs])
+       truth
+predict  0  1
+      0 26  0
+      1  0 26
+> mean(ypred==train$labs_svm[-obs])
+[1] 1
+> 
+> #confusion matrix for validation data
+> confusionMatrix(ypred, train$labs_svm[-obs])
+Confusion Matrix and Statistics
+
+          Reference
+Prediction  0  1
+         0 26  0
+         1  0 26
+                                     
+               Accuracy : 1          
+                 95% CI : (0.9315, 1)
+    No Information Rate : 0.5        
+    P-Value [Acc > NIR] : 2.22e-16   
+                                     
+                  Kappa : 1          
+                                     
+ Mcnemar's Test P-Value : NA         
+                                     
+            Sensitivity : 1.0        
+            Specificity : 1.0        
+         Pos Pred Value : 1.0        
+         Neg Pred Value : 1.0        
+             Prevalence : 0.5        
+         Detection Rate : 0.5        
+   Detection Prevalence : 0.5        
+      Balanced Accuracy : 1.0        
+                                     
+       'Positive' Class : 0          
+                                     
+> 
+> #matrix for validation data measures
+> measures_valid<-matrix(nrow=2, ncol=3, data=0 )
+> rownames(measures_valid)<-c('0', '1')
+> colnames(measures_valid)<-c("Precision", "Recall", "F-1 Score")
+> 
+> #collecting measures
+> precision <- posPredValue(ypred, train$labs_svm[-obs], positive="0")
+> recall <- sensitivity(ypred, train$labs_svm[-obs], positive="0")
+> F1 <- (2 * precision * recall) / (precision + recall)
+> measures_valid[1,1]<-precision
+> measures_valid[1,2]<-recall
+> measures_valid[1,3]<-F1
+> 
+> precision <- posPredValue(ypred, train$labs_svm[-obs], positive="1")
+> recall <- sensitivity(ypred, train$labs_svm[-obs], positive="1")
+> F1 <- (2 * precision * recall) / (precision + recall)
+> measures_valid[2,1]<-precision
+> measures_valid[2,2]<-recall
+> measures_valid[2,3]<-F1
+> 
+> xtable(measures_valid)
+% latex table generated in R 3.4.4 by xtable 1.8-4 package
+% Fri Dec  4 15:53:39 2020
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Precision & Recall & F-1 Score \\ 
+  \hline
+0 & 1.00 & 1.00 & 1.00 \\ 
+  1 & 1.00 & 1.00 & 1.00 \\ 
+   \hline
+\end{tabular}
+\end{table}
+> 
+> colMeans(measures_valid)
+Precision    Recall F-1 Score 
+        1         1         1 
+> 
+> #
+> 
+> proc.time()
+   user  system elapsed 
+  8.073   0.138   8.196 
